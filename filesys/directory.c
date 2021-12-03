@@ -24,6 +24,7 @@ struct dir_entry {
    given SECTOR.  Returns true if successful, false on failure. */
 bool
 dir_create(block_sector_t sector, size_t entry_cnt) {
+	// Driver start: Ankit
 	bool success = inode_create(sector, entry_cnt * sizeof(struct dir_entry));
 	if (success) {
 		struct dir *dir = dir_open(inode_open(sector));
@@ -32,19 +33,21 @@ dir_create(block_sector_t sector, size_t entry_cnt) {
 		dir_close(dir);
 	}
 	return success;
+	// Driver end: Ankit
 }
 
 /* Opens and returns the directory for the given INODE, of which
    it takes ownership.  Returns a null pointer on failure. */
 struct dir *
 dir_open(struct inode *inode) {
+	// Driver start: Jimmy
 	if (!inode)
 		return NULL;
 	inode_set_dir(inode);
 	struct dir *dir = calloc(1, sizeof *dir);
 	if (inode != NULL && dir != NULL) {
 		dir->inode = inode;
-		// printf("setting pos for dir %p\n", dir);
+		// setting pos for dir
 		dir->pos = sizeof(struct dir_entry) * 2;
 		return dir;
 	} else {
@@ -52,8 +55,10 @@ dir_open(struct inode *inode) {
 		free(dir);
 		return NULL; 
 	}
+	// Driver end: Jimmy
 }
 
+// Driver start: Joshua
 /* Opens the root directory and returns a directory for it.
    Return true if successful, false on failure. */
 struct dir *
@@ -76,7 +81,9 @@ dir_close(struct dir *dir) {
 		free(dir);
 	}
 }
+// Driver end: Joshua
 
+// Driver start: Ankit
 /* Returns the inode encapsulated by DIR. */
 struct inode *
 dir_get_inode(struct dir *dir) {
@@ -109,6 +116,7 @@ lookup(const struct dir *dir, const char *name,
 	}
 	return false;
 }
+// Driver end: Ankit
 
 /* Searches DIR for a file with the given NAME
    and returns true if one exists, false otherwise.
@@ -117,7 +125,8 @@ lookup(const struct dir *dir, const char *name,
 bool
 dir_lookup(const struct dir *dir, const char *name,
 		struct inode **inode) {
-	// printf("trying to find %s in %d\n", name, inode_get_inumber(dir->inode));
+	// find name in dir
+	// Driver start: Ankit
 	struct dir_entry e;
 
 	ASSERT(dir != NULL);
@@ -128,9 +137,10 @@ dir_lookup(const struct dir *dir, const char *name,
 	else
 		*inode = NULL;
 
-	// printf("did it succeed %d\n", *inode != NULL);
+	// check if succeed
 
 	return *inode != NULL;
+	// Driver end: Ankit
 }
 
 /* Adds a file named NAME to DIR, which must not already contain a
@@ -141,6 +151,7 @@ dir_lookup(const struct dir *dir, const char *name,
    error occurs. */
 bool
 dir_add(struct dir *dir, const char *name, block_sector_t inode_sector) {
+	// Driver start: Joshua
 	struct dir_entry e;
 	off_t ofs;
 	bool success = false;
@@ -173,7 +184,8 @@ dir_add(struct dir *dir, const char *name, block_sector_t inode_sector) {
 	strlcpy(e.name, name, sizeof e.name);
 	e.inode_sector = inode_sector;
 	success = inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
-
+	// Driver end: Joshua
+	// Driver start: Jimmy
 	if (success && ofs > (off_t)sizeof(struct dir_entry)) {
 		struct inode *inode = inode_open(inode_sector);
 		if (!inode)
@@ -182,9 +194,9 @@ dir_add(struct dir *dir, const char *name, block_sector_t inode_sector) {
 			inode_close(inode);
 			return true;
 		}
-		// printf("going to set isdir of %d with it being %d\n", inode_get_inumber(inode), inode_isdir(inode));
+		// set isdir 
 		struct dir *child_dir = dir_open(inode);
-		// printf("adding . and .. to %d\n", inode_sector);
+		// add to sector
 		success = dir_add(child_dir, ".", inode_sector);
 		success |= dir_add(child_dir, "..", inode_get_inumber(dir->inode));
 		dir_close(child_dir);
@@ -193,7 +205,7 @@ dir_add(struct dir *dir, const char *name, block_sector_t inode_sector) {
 			inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
 		}
 	}
-	// printf("added %d onto directory %d\n", inode_sector, inode_get_inumber(dir->inode));
+	// added to directory
 
 done:
 	/*
@@ -201,6 +213,7 @@ done:
 	success = dir_lookup(dir, name, &inode);
 	*/
 	return success;
+	// Driver end: Jimmy
 }
 
 /* Removes any entry for NAME in DIR.
@@ -208,6 +221,7 @@ done:
    which occurs only if there is no file with the given NAME. */
 bool
 dir_remove(struct dir *dir, const char *name) {
+	// Driver start: Ankit
 	struct dir_entry e;
 	struct inode *inode = NULL;
 	bool success = false;
@@ -255,8 +269,10 @@ dir_remove(struct dir *dir, const char *name) {
 done:
 	inode_close(inode);
 	return success;
+	// Driver end: Ankit
 }
 
+// Driver start: Jimmy
 /* Reads the next directory entry in DIR and stores the name in
    NAME.  Returns true if successful, false if the directory
    contains no more entries. */
@@ -268,13 +284,12 @@ dir_readdir(struct dir *dir, char name[NAME_MAX + 1]) {
 		dir->pos = 2 * sizeof(e);
 	while (inode_read_at(dir->inode, &e, sizeof e, dir->pos) == sizeof e) {
 		dir->pos += sizeof e;
-		// printf("new position is %d for dir %p\n", dir->pos, dir);
+		// new position set in dir->pos
 		if (e.in_use) {
 			strlcpy(name, e.name, NAME_MAX + 1);
 			return true;
 		} 
 	}
-	// dir->pos = sizeof(struct dir_entry) * 2;
 	return false;
 }
 
@@ -287,3 +302,4 @@ off_t
 dir_getpos(struct dir *dir) {
 	return dir->pos;
 }
+// Driver end: Jimmy

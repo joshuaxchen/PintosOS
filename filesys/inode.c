@@ -38,32 +38,33 @@ struct inode {
 
 static block_sector_t
 init_sector(void) {
-	// printf("creating new data sector\n");
+	// Driver start: Joshua
+	// create new data sector
 	block_sector_t sector;
 	if (!free_map_allocate(1, &sector))
 		return -1;
-	// printf("after allocate\n");
 	static char zeros[BLOCK_SECTOR_SIZE];
-	// printf("before write\n");
 	block_write(fs_device, sector, zeros);
-	// printf("after write\n");
 	return sector;
+	// Driver end: Joshua
 }
 
 static block_sector_t
 init_indirect_sector(void) {
-	// printf("creating new indirect sector\n");
+	// Driver start: Jimmy
+	// create new indirect sector
 	block_sector_t sector;
 	if (!free_map_allocate(1, &sector))
 		return -1;
-	// printf("successfully allocated from free map\n");
+	// allocated from free map
 	block_sector_t data[BLOCK_SECTOR_SIZE / sizeof(block_sector_t)];
 	size_t i;
 	for (i = 0; i < BLOCK_SECTOR_SIZE / sizeof(block_sector_t); i++)
 		data[i] = -1;
 	block_write(fs_device, sector, data);
-	// printf("finished creating new indirect sector\n");
+	// indirect sector created
 	return sector;
+	// Driver start: Jimmy
 }
 
 /* Returns the block device sector that contains byte offset POS
@@ -72,7 +73,8 @@ init_indirect_sector(void) {
    POS. */
 static block_sector_t
 byte_to_sector(struct inode *inode, off_t pos) {
-	// printf("trying to get sector from bytes on file %d pos %d\n", inode->sector, pos);
+	// trying to get sector from bytes on file
+	// Driver start: Joshua, Jimmy, Ankit
 	ASSERT(inode != NULL);
 	const size_t NUM_PTRS = BLOCK_SECTOR_SIZE / sizeof(block_sector_t);
 	size_t first_idx = pos / NUM_PTRS / NUM_PTRS / BLOCK_SECTOR_SIZE;
@@ -84,7 +86,7 @@ byte_to_sector(struct inode *inode, off_t pos) {
 			return -1;
 		block_write(fs_device, inode->sector, &inode->data);
 	}
-	// printf("got first block as %d at index %d\n", inode->data.blocks[first_idx], first_idx);
+	// retrieved first block
 	block_sector_t *indirect_block = malloc(BLOCK_SECTOR_SIZE);
 	if (!indirect_block)
 		return -1;
@@ -98,23 +100,23 @@ byte_to_sector(struct inode *inode, off_t pos) {
 		block_write(fs_device, inode->data.blocks[first_idx], indirect_block);
 	}
 	block_sector_t second_block_sector = indirect_block[second_idx];
-	// printf("got second block as %d at index %d\n", second_block_sector, second_idx);
+	// retrieve second block
 	block_read(fs_device, second_block_sector, indirect_block);
 	if (indirect_block[third_idx] == (block_sector_t)-1) {
 		indirect_block[third_idx] = init_sector();
-		// printf("inited last block as %d\n", indirect_block[third_idx]);
+		// inited last block
 		if (indirect_block[third_idx] == (block_sector_t)-1) {
 			free(indirect_block);
 			return -1;
 		}
-		// printf("writing block to %d\n", second_block_sector);
+		// write block
 		block_write(fs_device, second_block_sector, indirect_block);
 	}
-	// printf("freeing indirect block %p\n", indirect_block);
+	// free indirect block
 	block_sector_t result = indirect_block[third_idx];
 	free(indirect_block);
-	// printf("got sector as %d at index %d\n", result, third_idx);
 	return result;
+	// Driver end: Joshua, Jimmy, Ankit
 }
 
 /* List of open inodes, so that opening a single inode twice
@@ -134,6 +136,7 @@ inode_init(void) {
    Returns false if memory or disk allocation fails. */
 bool
 inode_create(block_sector_t sector, off_t length) {
+	// Driver start: Jimmy, Joshua
 	struct inode *inode;
 	ASSERT (length >= 0);
 	/* If this assertion fails, the inode structure is not exactly
@@ -152,16 +155,16 @@ inode_create(block_sector_t sector, off_t length) {
 	block_write(fs_device, sector, &inode->data);
 
 	if (length > 0) {
-		// printf("preallocating %d bytes for new file %d\n", length, sector);
+		// preallocating bytes for new file
 		inode->sector = sector;
 		for (i = 0; i < (size_t)(length + BLOCK_SECTOR_SIZE - 1) / BLOCK_SECTOR_SIZE; i++) {
-			// printf("preallocating byte at location %d\n", i * BLOCK_SECTOR_SIZE);
 			byte_to_sector(inode, i * BLOCK_SECTOR_SIZE);
 		}
 	}
 
 	free(inode);
 	return true;
+	// Driver end: Jimmy, Joshua
 }
 
 /* Reads an inode from SECTOR
@@ -169,7 +172,8 @@ inode_create(block_sector_t sector, off_t length) {
    Returns a null pointer if memory allocation fails. */
 struct inode *
 inode_open(block_sector_t sector) {
-	// printf("trying to open sector %d\n", sector);
+	// Driver start: Ankit
+	// try to open sector
 	if (sector == (block_sector_t)-1)
 		return NULL;
 	struct list_elem *e;
@@ -185,30 +189,30 @@ inode_open(block_sector_t sector) {
 		}
 	}
 
-	// printf("sector does not exist %d\n", sector);
+	// sector does not exist
 
 	/* Allocate memory. */
 	inode = malloc(sizeof *inode);
 	if (inode == NULL)
 		return NULL;
 
-	// printf("allocated inode\n");
+	// inode allocated
 
 	/* Initialize. */
 	list_push_front(&open_inodes, &inode->elem);
-	// printf("pushed onto list\n");
+	// push onto list
 	inode->sector = sector;
 	inode->open_cnt = 1;
 	inode->deny_write_cnt = 0;
 	inode->removed = false;
-	// printf("initing lock\n");
 	lock_init(&inode->lock);
-	// printf("reading block\n");
 	block_read(fs_device, inode->sector, &inode->data);
-	// printf("finished opening\n");
+	// finsihed opening
 	return inode;
+	// Driver end: Ankit
 }
 
+// Driver start: Joshua
 /* Reopens and returns INODE. */
 struct inode *
 inode_reopen(struct inode *inode) {
@@ -222,9 +226,10 @@ block_sector_t
 inode_get_inumber(const struct inode *inode) {
 	return inode->sector;
 }
-
+// Driver end: Joshua
 static void
 remove_data_blocks(struct inode *inode) {
+	// Driver start: Ankit, Joshua
 	block_sector_t *first_indirect_block = malloc(BLOCK_SECTOR_SIZE);
 	block_sector_t *second_indirect_block = malloc(BLOCK_SECTOR_SIZE);
 	size_t i, j, k;
@@ -247,6 +252,7 @@ remove_data_blocks(struct inode *inode) {
 	}
 	free(first_indirect_block);
 	free(second_indirect_block);
+	// Driver end: Ankit, Joshua
 }
 
 /* Closes INODE and writes it to disk. (Does it?  Check code.)
@@ -254,6 +260,7 @@ remove_data_blocks(struct inode *inode) {
    If INODE was also a removed inode, frees its blocks. */
 void
 inode_close(struct inode *inode) {
+	// Driver start: Jimmy
 	/* Ignore null pointer. */
 	if (inode == NULL)
 		return;
@@ -271,6 +278,7 @@ inode_close(struct inode *inode) {
 
 		free(inode); 
 	}
+	// Driver end: Jimmy
 }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
@@ -286,15 +294,14 @@ inode_remove(struct inode *inode) {
    than SIZE if an error occurs or end of file is reached. */
 off_t
 inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset) {
-	// printf("reading from inode %d size %d offset %d length %d\n", inode->sector, size, offset, inode_length(inode));
+	// Driver start: Ankit, Joshua, Jimmy
 	if (inode_length(inode) <= offset)
 		return 0;
-	// printf("actually reading\n");
+	// reading
 	uint8_t *buffer = buffer_;
 	off_t bytes_read = 0;
 	uint8_t *bounce = NULL;
 
-	// inode_lock(inode);
 	while (size > 0) {
 		/* Disk sector to read, starting byte offset within sector. */
 		block_sector_t sector_idx = byte_to_sector(inode, offset);
@@ -333,11 +340,11 @@ inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset) {
 		offset += chunk_size;
 		bytes_read += chunk_size;
 	}
-	// inode_unlock(inode);
 	free(bounce);
-	// printf("successfully read data %d\n", *(char*)buffer_);
+	// data read successful
 
 	return bytes_read;
+	// Driver end: Ankit, Joshua, Jimmy
 }
 
 /* Writes SIZE bytes from BUFFER into INODE, starting at OFFSET.
@@ -347,7 +354,7 @@ inode_read_at(struct inode *inode, void *buffer_, off_t size, off_t offset) {
    growth is not yet implemented.) */
 off_t
 inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t offset) {
-	// printf("writing to inode %d size %d offset %d\n", inode->sector, size, offset);
+	// Driver start: Ankit, Joshua, Jimmy
 	const uint8_t *buffer = buffer_;
 	off_t bytes_written = 0;
 	uint8_t *bounce = NULL;
@@ -355,7 +362,6 @@ inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t offse
 	if (inode->deny_write_cnt)
 		return 0;
 
-	// inode_lock(inode);
 	if (inode_length(inode) < offset + size)
 		inode_set_length(inode, offset + size);
 
@@ -402,12 +408,13 @@ inode_write_at(struct inode *inode, const void *buffer_, off_t size, off_t offse
 		offset += chunk_size;
 		bytes_written += chunk_size;
 	}
-	// inode_unlock(inode);
 	free(bounce);
 
 	return bytes_written;
+	// Driver end: Ankit, Joshua, Jimmy
 }
 
+// Driver start: Ankit, Jimmy
 /* Disables writes to INODE.
    May be called at most once per inode opener. */
 void
@@ -444,7 +451,7 @@ inode_length(const struct inode *inode) {
 /* Sets the is_dir flag to 1. */
 void
 inode_set_dir(struct inode *inode) {
-	// printf("setting directory of %d to true\n", inode->sector);
+	// setting directory to true
 	if ((inode->data.flags & INODE_ISDIR) == 0) {
 		inode->data.flags |= INODE_ISDIR;
 		block_write(fs_device, inode->sector, &inode->data);
@@ -468,3 +475,4 @@ void
 inode_unlock(struct inode *inode) {
 	lock_release(&inode->lock);
 }
+// Driver end: Ankit, Jimmy

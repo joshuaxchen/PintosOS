@@ -45,7 +45,8 @@ get_curr_dir(void) {
 
 static bool
 get_directory(struct dir **dir, const char *name, char *buffer) {
-	// printf("getting directory for name %s\n", name);
+	// Driver start: Jimmy
+	// get directory for name
 	if (name[0] == 0) {
 		*dir = NULL;
 		return false;
@@ -68,19 +69,19 @@ get_directory(struct dir **dir, const char *name, char *buffer) {
 				if (*dir)
 					dir_close(*dir);
 				*dir = dir_open_root();
-				// printf("opening root\n");
+				// open root
 			} else {
 				buffer[buffer_idx] = 0;
 				buffer_idx = 0;
 				struct inode *inode;
-				// printf("trying to find name %s\n", buffer);
+				// try to find name
 				if (!*dir || !dir_lookup(*dir, buffer, &inode)) {
 					if (*dir)
 						dir_close(*dir);
 					*dir = NULL;
 					return false;
 				}
-				// printf("opening directory for name %s\n", buffer);
+				// open directory for name
 				if (*dir)
 					dir_close(*dir);
 				*dir = dir_open(inode);
@@ -98,8 +99,9 @@ get_directory(struct dir **dir, const char *name, char *buffer) {
 		name_idx++;
 	}
 	buffer[buffer_idx] = 0;
-	// printf("found file for name %s\n", buffer);
+	// found file name
 	return *dir != NULL;
+	// Driver end: Jimmy
 }
 
 /* Creates a file named NAME with the given INITIAL_SIZE.
@@ -108,7 +110,7 @@ get_directory(struct dir **dir, const char *name, char *buffer) {
  * or if internal memory allocation fails. */
 bool
 filesys_create(const char *name, off_t initial_size) {
-	// printf("**********create %s\n", name);
+	// Driver start: Joshua
 	block_sector_t inode_sector = 0;
 	struct dir *dir = get_curr_dir();
 	char fname[NAME_MAX + 1];
@@ -122,6 +124,7 @@ filesys_create(const char *name, off_t initial_size) {
 		dir_close(dir);
 
 	return success;
+	// Driver end: Joshua
 }
 
 /* Opens the file with the given NAME.
@@ -131,17 +134,15 @@ filesys_create(const char *name, off_t initial_size) {
  * or if an internal memory allocation fails. */
 struct file *
 filesys_open(const char *name) {
-	// printf("trying to open %s\n", name);
-	// printf("**********open %s\n", name);
+	// Driver start: Ankit
+	// try to open
 	struct dir *dir = get_curr_dir();
-	// printf("current dir is %d\n", inode_get_inumber(dir_get_inode(dir)));
 	char fname[NAME_MAX + 1];
 	if (!get_directory(&dir, name, fname)) {
-		// printf("failed to find the directory\n");
+		// failed to find directory
 		dir_close(dir);
 		return NULL;
 	}
-	// printf("directory is %d with extra name %s\n", inode_get_inumber(dir_get_inode(dir)), fname);
 	struct inode *inode = NULL;
 
 	if (fname[0] != 0) {
@@ -151,25 +152,23 @@ filesys_open(const char *name) {
 		inode = dir_get_inode(dir);
 		free(dir);
 		// manually unlocking because dir_close was not called
-		// inode_unlock(inode);
 	}
-	// printf("finished open\n");
+	// finished open
 
 	return file_open(inode);
+	// Driver end: Ankit
 }
 
+// Driver start: Ankit, Jimmy
 /* Deletes the file named NAME.
  * Returns true if successful, false on failure.
  * Fails if no file named NAME exists,
  * or if an internal memory allocation fails. */
 bool
 filesys_remove(const char *name) {
-	// printf("**********remove %s\n", name);
 	struct dir *dir = get_curr_dir();
-	// printf("dir %p\n", dir);
 	char fname[NAME_MAX + 1];
 	bool success = get_directory(&dir, name, fname) && dir_remove(dir, fname);
-	// printf("dir %p fname %s\n", dir, fname);
 	if (dir)
 		dir_close(dir); 
 
@@ -194,11 +193,11 @@ filesys_chdir(const char *name) {
 		dir_close(dir);
 	return success;
 }
-
+// Driver end: Ankit, Jimmy
 /* Makes a directory */
 bool
 filesys_mkdir(const char *name) {
-	// printf("**********mkdir %s\n", name);
+	// driver start: Joshua
 	block_sector_t inode_sector = 0;
 	struct dir *dir = get_curr_dir();
 	char fname[NAME_MAX + 1];
@@ -208,26 +207,28 @@ filesys_mkdir(const char *name) {
 	if (success) {
 		struct dir *new_dir = dir_open(inode_open(inode_sector));
 		dir_close(new_dir);
-		// printf("adding inode name %s into dir\n", fname);
+		// add inode into dir
 		success = dir_add(dir, fname, inode_sector);
-		// printf("did it succeed in adding %d\n", success);
+		// check if successful 
 	}
 	if (!success && inode_sector != 0) 
 		free_map_release(inode_sector, 1);
 	if (dir)
 		dir_close(dir);
-	// printf("finished mkdir %s\n", name);
+	// mkdir finished
 
 	return success;
+	// driver end: joshua
 }
 
 /* Formats the file system. */
 static void
 do_format(void) {
-	// printf("Formatting file system...");
+	// driver start: Ankit
+	// format file system
 	free_map_create();
 	if (!dir_create(ROOT_DIR_SECTOR, 16))
 		PANIC("root directory creation failed");
 	free_map_close();
-	// printf("done.\n");
+	// Driver end: Ankit
 }
