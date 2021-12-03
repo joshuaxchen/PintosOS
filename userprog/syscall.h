@@ -5,6 +5,7 @@
 #include "threads/synch.h"
 #include "filesys/file.h"
 
+extern struct lock filesys_lock;
 int exit_with_status(int status);
 void syscall_init (void);
 

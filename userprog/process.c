@@ -272,12 +272,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
     file_name_buffer[buffer_idx++] = file_name[idx++];
   file_name_buffer[buffer_idx] = 0;
 
-  struct process_info *pi = &thread_current()->process_info;
   // TODO: add synchronization
   file = filesys_open (file_name_buffer);
   if (file)
     file_deny_write(file);
-  pi->files[0] = file;
+  thread_current()->process_info.files[0] = file;
   // Driver end: Jimmy
   if (file == NULL) 
     {
@@ -371,7 +370,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   // Driver start: Jimmy
   if (!success) {
     file_close (file);
-    pi->files[0] = NULL;
+    thread_current()->process_info.files[0] = NULL;
   }
   // Driver end: Jimmy
   return success;
@@ -522,7 +521,7 @@ setup_stack (void **esp, const char *file_name)
         // align start of argv
         char **argvStart = (char**)((argvDataStart -
                     (uintptr_t)argvDataStart % 4) - (argc + 1) * sizeof(char*));
-        if (argvStart - sizeof(char **) - sizeof(int) - sizeof(void*) < PHYS_BASE - PGSIZE)
+        if ((uintptr_t)argvStart - sizeof(char **) - sizeof(int) - sizeof(void*) < (uintptr_t)PHYS_BASE - PGSIZE)
           return false;
         // Driver End: Jimmy Ding
         // Driver Start: Ankit Bhattacharyya

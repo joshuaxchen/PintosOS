@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 
+#include "devices/block.h"
 #include "threads/synch.h"
 
 /* States in a thread's life cycle. */
@@ -36,6 +37,7 @@ struct process_info
    struct list_elem elem;
    int exec_status;
    int exit_status;
+   block_sector_t curr_dir;
 };
 
 /* A kernel thread or user process.

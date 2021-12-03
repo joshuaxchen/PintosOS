@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "filesys/filesys.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -183,6 +184,7 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
   list_push_back(&(&thread_current()->process_info)->children, &(&t->process_info)->elem);
+  t->process_info.curr_dir = thread_current()->process_info.curr_dir;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -472,6 +474,7 @@ init_thread (struct thread *t, const char *name, int priority)
   sema_init(&pi->exit_semaphore, 0);
   sema_init(&pi->wait_semaphore, 0);
   list_init(&pi->children);
+  pi->curr_dir = ROOT_DIR_SECTOR;
 
   list_push_back (&all_list, &t->allelem);
   intr_set_level(old_level);
