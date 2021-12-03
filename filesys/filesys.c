@@ -166,6 +166,7 @@ bool
 filesys_remove(const char *name) {
 	// printf("**********remove %s\n", name);
 	struct dir *dir = get_curr_dir();
+	// printf("dir %p\n", dir);
 	char fname[NAME_MAX + 1];
 	bool success = get_directory(&dir, name, fname) && dir_remove(dir, fname);
 	// printf("dir %p fname %s\n", dir, fname);
@@ -181,12 +182,13 @@ filesys_chdir(const char *name) {
 	struct dir *dir = get_curr_dir();
 	char fname[NAME_MAX + 1];
 	bool success = get_directory(&dir, name, fname);
-	// printf("did it succeed in getting directory %d\n", success);
 	if (success) {
 		struct inode *inode = NULL;
-		dir_lookup(dir, fname, &inode);
-		thread_current()->process_info.curr_dir = inode_get_inumber(inode);
-		inode_close(inode);
+		success = dir_lookup(dir, fname, &inode);
+		if (success)
+			thread_current()->process_info.curr_dir = inode_get_inumber(inode);
+		if (inode)
+			inode_close(inode);
 	}
 	if (dir)
 		dir_close(dir);
@@ -214,6 +216,7 @@ filesys_mkdir(const char *name) {
 		free_map_release(inode_sector, 1);
 	if (dir)
 		dir_close(dir);
+	// printf("finished mkdir %s\n", name);
 
 	return success;
 }

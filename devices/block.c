@@ -120,7 +120,6 @@ check_sector (struct block *block, block_sector_t sector)
 void
 block_read (struct block *block, block_sector_t sector, void *buffer)
 {
-	// printf("performing block read\n");
   check_sector (block, sector);
   block->ops->read (block->aux, sector, buffer);
   block->read_cnt++;

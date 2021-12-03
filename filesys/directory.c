@@ -185,10 +185,15 @@ dir_add(struct dir *dir, const char *name, block_sector_t inode_sector) {
 		// printf("going to set isdir of %d with it being %d\n", inode_get_inumber(inode), inode_isdir(inode));
 		struct dir *child_dir = dir_open(inode);
 		// printf("adding . and .. to %d\n", inode_sector);
-		dir_add(child_dir, ".", inode_sector);
-		dir_add(child_dir, "..", inode_get_inumber(dir->inode));
+		success = dir_add(child_dir, ".", inode_sector);
+		success |= dir_add(child_dir, "..", inode_get_inumber(dir->inode));
 		dir_close(child_dir);
+		if (!success) {
+			e.in_use = false;
+			inode_write_at(dir->inode, &e, sizeof e, ofs) == sizeof e;
+		}
 	}
+	// printf("added %d onto directory %d\n", inode_sector, inode_get_inumber(dir->inode));
 
 done:
 	/*
@@ -234,7 +239,7 @@ dir_remove(struct dir *dir, const char *name) {
 			goto done;
 	}
 
-	if (inode_get_inumber(inode) == thread_current()->process_info.curr_dir)
+	if (e.inode_sector == thread_current()->process_info.curr_dir && !identity)
 		thread_current()->process_info.curr_dir = -1;
 
 	/* Erase directory entry. */
