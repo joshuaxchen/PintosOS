@@ -108,7 +108,6 @@ get_directory(struct dir **dir, const char *name, char *buffer) {
  * or if internal memory allocation fails. */
 bool
 filesys_create(const char *name, off_t initial_size) {
-	// TODO: synchronization
 	// printf("**********create %s\n", name);
 	block_sector_t inode_sector = 0;
 	struct dir *dir = get_curr_dir();
@@ -132,7 +131,6 @@ filesys_create(const char *name, off_t initial_size) {
  * or if an internal memory allocation fails. */
 struct file *
 filesys_open(const char *name) {
-	// TODO: synchronization
 	// printf("trying to open %s\n", name);
 	// printf("**********open %s\n", name);
 	struct dir *dir = get_curr_dir();
@@ -167,7 +165,6 @@ filesys_open(const char *name) {
 bool
 filesys_remove(const char *name) {
 	// printf("**********remove %s\n", name);
-	// TODO: synchronization
 	struct dir *dir = get_curr_dir();
 	char fname[NAME_MAX + 1];
 	bool success = get_directory(&dir, name, fname) && dir_remove(dir, fname);
@@ -181,7 +178,6 @@ filesys_remove(const char *name) {
 /* Changes the directory */
 bool
 filesys_chdir(const char *name) {
-	// TODO: synchronization
 	struct dir *dir = get_curr_dir();
 	char fname[NAME_MAX + 1];
 	bool success = get_directory(&dir, name, fname);
@@ -201,7 +197,6 @@ filesys_chdir(const char *name) {
 bool
 filesys_mkdir(const char *name) {
 	// printf("**********mkdir %s\n", name);
-	// TODO: synchronization
 	block_sector_t inode_sector = 0;
 	struct dir *dir = get_curr_dir();
 	char fname[NAME_MAX + 1];
